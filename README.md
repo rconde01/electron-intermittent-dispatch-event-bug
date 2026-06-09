@@ -19,11 +19,15 @@ breakpoints**.
 
 ## Environment
 
-Observed with (your numbers will print at the top of every run as the `[env]` line — please
-paste your own):
+Reproduced on (the exact versions print at the top of every run as the `[env]` line):
+
+| Electron | Chromium | V8 | Node | Reproduces? |
+| --- | --- | --- | --- | --- |
+| 42.3.3 (latest stable at time of writing) | 148.0.7778.218 | 14.8.178.28 | 24.15.0 | yes |
+| 41.0.2 | 146.0.7680.72 | 14.6.202.11 | 24.14.0 | yes |
 
 ```
-[env] electron=41.0.2 chrome=146.0.7680.72 node=24.14.0 v8=14.6.202.11-electron.0 platform=win32
+[env] electron=42.3.3 chrome=148.0.7778.218 node=24.15.0 v8=14.8.178.28-electron.0 platform=win32
 ```
 
 - OS: Windows 11 (named-pipe transport). The repro is cross-platform (uses a Unix domain
@@ -41,9 +45,13 @@ npm start
 The process exits `0` and prints `REPRODUCED: …` on the first anomaly, or exits `1` with
 `no anomaly within …ms` if it didn't hit the race this run.
 
-**It is timing-sensitive / intermittent.** A single anomaly in several hundred to a few
-thousand messages is typical. If a run does not reproduce, **run it a few more times** (or
-tweak the tunables at the top of `main.js`). All output is also written to `run.log`.
+**It is timing-sensitive / intermittent.** The anomaly fires only when a `dispatchEvent`
+call lands on a pause transition; in practice it has surfaced anywhere from ~40 to ~860
+pauses into a run (the default `MAX_RUN_MS` is 5 minutes). **If a run times out without an
+anomaly, run it again** — a clean run does not mean the bug is absent. All output is also
+written to `run.log`. Counter-intuitively, sending *faster* did not help; the tunables at
+the top of `main.js` (`SEND_INTERVAL_MS=10`, `PAUSE_PERIOD_MS=300`, `PAUSE_DURATION_MS=100`)
+are the ones observed to reproduce most reliably.
 
 ## What the repro does
 
@@ -75,9 +83,12 @@ The anomaly always appears immediately after a `Debugger.pause` is issued (repre
 lines from `run.log`):
 
 ```
-[main] Debugger.pause #28
-[renderer] *** ANOMALY *** msg-1209: dispatchEvent returned notCanceled=true, but EventTarget listeners did NOT run (internal=false, external=false); plain callback ran=true. [message #1209]
+[main] Debugger.pause #857
+[renderer] *** ANOMALY *** msg-17032: dispatchEvent returned notCanceled=true, but EventTarget listeners did NOT run (internal=false, external=false); plain callback ran=true. [message #17032]
 ```
+
+(Captured on Electron 42.3.3 / Chromium 148. The same signature reproduces on 41.0.2 /
+Chromium 146.)
 
 Reading the flags:
 

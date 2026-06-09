@@ -21,7 +21,7 @@ app.commandLine.appendSwitch("disable-gpu");
 const SEND_INTERVAL_MS = 10; // how often to send a message
 const PAUSE_PERIOD_MS = 300; // how often to pause the renderer
 const PAUSE_DURATION_MS = 100; // how long each pause lasts
-const MAX_RUN_MS = 120000; // give up (no repro) after this long
+const MAX_RUN_MS = 300000; // give up (no repro) after this long
 // ---------------------------------------------------------------------------
 
 const LOG = path.join(__dirname, "run.log");
