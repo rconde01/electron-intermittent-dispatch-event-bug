@@ -1,0 +1,13 @@
+{
+  "name": "electron-dispatchevent-pause-repro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Repro: EventTarget.dispatchEvent() skips listener invocation in an Electron renderer when it coincides with a V8 inspector pause (Debugger.pause)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "41.0.2"
+  }
+}
