@@ -58,8 +58,7 @@ This was originally hit in a real app where protobuf messages arriving over a so
 
 ## Testcase Gist URL
 
-<!-- Replace with your gist/repo URL for the attached minimal repro -->
-(minimal repro attached / linked)
+https://github.com/rconde01/electron-intermittent-dispatch-event-bug
 
 ### How to run
 
