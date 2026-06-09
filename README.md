@@ -122,9 +122,31 @@ and the integrated Node/Chromium event loop, which is Electron-specific. There i
 straightforward way to construct the same "dispatch from a socket `'data'` callback" timing
 in stock Chromium.
 
-The underlying listener-skip may ultimately be upstream V8/Blink inspector behavior, but it
-is only practically observable in an Electron renderer, so it is reported here; please
-escalate upstream if appropriate.
+**It is NOT a V8/Node issue — it requires Blink.** A pure-Node control (`node-only/`, see
+below) runs the identical logic — a `net` server, `class … extends EventTarget`,
+`dispatchEvent` per message — with a Worker thread driving the V8 inspector against the main
+thread (`Session.connectToMainThread()` + `Debugger.pause`/`resume`). Run under Electron's
+own bundled Node via `ELECTRON_RUN_AS_NODE=1`, i.e. **the exact same V8 build (14.8) as the
+failing renderer, just without Blink**, it does **not** reproduce:
+
+| Configuration | V8 | Real main-thread pauses | Anomalies |
+| --- | --- | --- | --- |
+| Electron renderer (Blink) | 14.8 | hit at pause #857 | reproduces |
+| Pure Node, same V8, no Blink (`ELECTRON_RUN_AS_NODE=1`) | 14.8 | ~1,900 over 10 min | 0 |
+
+Node's `EventTarget` invokes listeners as plain JS calls; a V8 inspector pause suspends the
+isolate at a safepoint without skipping that invocation. The skip is specific to **Blink's**
+DOM event-dispatch path (which guards entering a fresh listener callframe while the isolate
+is transitioning into the paused state). Hence this is reported as an Electron/Chromium
+(Blink) issue.
+
+To run the pure-Node control yourself:
+
+```sh
+ELECTRON_RUN_AS_NODE=1 npx electron node-only/repro.js   # same V8 as the renderer, no Blink
+# or with any system Node:
+node node-only/repro.js
+```
 
 ## Workaround
 
@@ -140,3 +162,7 @@ messages.
 - `renderer.js` — `MessageSocket extends EventTarget` pipe server + per-message anomaly detection.
 - `index.html` — loads `renderer.js`.
 - `run.log` — written on each run (overwritten at start).
+- `node-only/` — pure-Node control (no Blink) showing the bug does **not** reproduce with
+  the same V8: `repro.js` (main thread: `net` server + `EventTarget`) and
+  `controller-worker.js` (Worker: drives `Debugger.pause`/`resume` on the main thread and
+  sends messages).
